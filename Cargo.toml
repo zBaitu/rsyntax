@@ -1,0 +1,7 @@
+[package]
+name = "rsyntax"
+version = "0.1.0"
+authors = ["baitu <zbaitu@gmail.com>"]
+
+[lib]
+name = "rst"
