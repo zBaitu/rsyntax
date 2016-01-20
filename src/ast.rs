@@ -10,8 +10,6 @@
 
 // The Rust abstract syntax tree.
 
-pub use parse::lexer::comments::{Comment, Literal};
-
 pub use self::BinOp_::*;
 pub use self::BlockCheckMode::*;
 pub use self::CaptureClause::*;

@@ -14,7 +14,7 @@
 //!
 //! This API is completely unstable and subject to change.
 
-//#![crate_name = "syntax"]
+// #![crate_name = "syntax"]
 #![unstable(feature = "rustc_private", issue = "27812")]
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]
@@ -35,8 +35,11 @@
 extern crate serialize;
 extern crate term;
 extern crate libc;
-#[macro_use] extern crate log;
-#[macro_use] #[no_link] extern crate rustc_bitflags;
+#[macro_use]
+extern crate log;
+#[macro_use]
+#[no_link]
+extern crate rustc_bitflags;
 
 extern crate serialize as rustc_serialize; // used by deriving
 
@@ -123,3 +126,7 @@ pub mod ext {
         pub mod macro_rules;
     }
 }
+
+pub use ast::*;
+pub use parse::lexer::comments::{Comment, Literal};
+pub use codemap::{BytePos, Span};
