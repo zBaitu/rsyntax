@@ -128,5 +128,6 @@ pub mod ext {
 }
 
 pub use ast::*;
-pub use parse::lexer::comments::{Comment, Literal};
 pub use codemap::{BytePos, Span};
+pub use parse::ParseSess;
+pub use parse::lexer::comments::{Comment, Literal};
