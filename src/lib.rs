@@ -131,3 +131,4 @@ pub use ast::*;
 pub use codemap::{BytePos, Span};
 pub use parse::ParseSess;
 pub use parse::lexer::comments::{Comment, Literal};
+pub use ptr::P;
