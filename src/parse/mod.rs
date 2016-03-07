@@ -18,10 +18,11 @@ use parse::token::InternedString;
 use ptr::P;
 use str::char_at;
 
-use std::cell::RefCell;
+//use std::cell::RefCell;
 use std::io::Read;
 use std::iter;
-use std::path::{Path, PathBuf};
+//use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::rc::Rc;
 use std::str;
 
@@ -42,7 +43,7 @@ pub mod obsolete;
 pub struct ParseSess {
     pub span_diagnostic: Handler, // better be the same as the one in the reader!
     /// Used to determine and report recursive mod inclusions
-    included_mod_stack: RefCell<Vec<PathBuf>>,
+    //included_mod_stack: RefCell<Vec<PathBuf>>,
     code_map: Rc<CodeMap>,
 }
 
@@ -56,7 +57,7 @@ impl ParseSess {
     pub fn with_span_handler(handler: Handler, code_map: Rc<CodeMap>) -> ParseSess {
         ParseSess {
             span_diagnostic: handler,
-            included_mod_stack: RefCell::new(vec![]),
+            //included_mod_stack: RefCell::new(vec![]),
             code_map: code_map
         }
     }

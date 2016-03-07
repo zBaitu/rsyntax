@@ -69,7 +69,8 @@ use parse::lexer::{Reader, TokenAndSpan};
 use parse::obsolete::{ParserObsoleteMethods, ObsoleteSyntax};
 use parse::token::{self, intern, MatchNt, SubstNt, SpecialVarNt, InternedString};
 use parse::token::{keywords, special_idents, SpecialMacroVar};
-use parse::{new_sub_parser_from_file, ParseSess};
+//use parse::{new_sub_parser_from_file, ParseSess};
+use parse::ParseSess;
 use util::parser::{AssocOp, Fixity};
 use print::pprust;
 use ptr::P;
@@ -78,7 +79,8 @@ use parse::PResult;
 use std::collections::HashSet;
 use std::io::prelude::*;
 use std::mem;
-use std::path::{Path, PathBuf};
+//use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::rc::Rc;
 use std::slice;
 
@@ -5012,8 +5014,16 @@ impl<'a> Parser<'a> {
         if self.check(&token::Semi) {
             try!(self.bump());
             // This mod is in an external file. Let's go get it!
-            let (m, attrs) = try!(self.eval_src_mod(id, outer_attrs, id_span));
-            Ok((id, m, Some(attrs)))
+            //let (m, attrs) = try!(self.eval_src_mod(id, outer_attrs, id_span));
+            //Ok((id, m, Some(attrs)))
+            let mut attrs = Vec::new();
+            attrs.extend_from_slice(outer_attrs);
+            Ok((id, ItemMod(
+                Mod {
+                    inner: mk_sp(id_span.lo, id_span.lo),
+                    items: Vec::new(),
+                }),
+                Some(attrs)))
         } else {
             self.push_mod_path(id, outer_attrs);
             try!(self.expect(&token::OpenDelim(token::Brace)));
@@ -5041,9 +5051,11 @@ impl<'a> Parser<'a> {
         self.mod_path_stack.pop().unwrap();
     }
 
+/*
     pub fn submod_path_from_attr(attrs: &[ast::Attribute], dir_path: &Path) -> Option<PathBuf> {
         ::attr::first_attr_value_str_by_name(attrs, "path").map(|d| dir_path.join(&*d))
     }
+    */
 
     /// Returns either a path to a module, or .
     pub fn default_submod_path(id: ast::Ident, dir_path: &Path, codemap: &CodeMap) -> ModulePath
@@ -5082,6 +5094,7 @@ impl<'a> Parser<'a> {
         }
     }
 
+/*
     fn submod_path(&mut self,
                    id: ast::Ident,
                    outer_attrs: &[ast::Attribute],
@@ -5176,6 +5189,7 @@ impl<'a> Parser<'a> {
         self.sess.included_mod_stack.borrow_mut().pop();
         Ok((ast::ItemMod(m0), mod_attrs))
     }
+    */
 
     /// Parse a function declaration from a foreign module
     fn parse_item_foreign_fn(&mut self, vis: ast::Visibility, lo: BytePos,

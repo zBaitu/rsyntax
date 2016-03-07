@@ -23,7 +23,7 @@ use str::char_at;
 use std::io::Read;
 use std::usize;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum CommentStyle {
     /// No code on either side of each line of the comment
     Isolated,

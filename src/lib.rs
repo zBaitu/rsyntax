@@ -128,7 +128,9 @@ pub mod ext {
 }
 
 pub use ast::*;
-pub use codemap::{BytePos, Span};
+pub use attr::ThinAttributes;
+pub use codemap::{BytePos, Span, Spanned, SpanSnippetError};
 pub use parse::ParseSess;
-pub use parse::lexer::comments::{Comment, Literal};
+pub use parse::lexer::comments::{Comment, CommentStyle, Literal};
+pub use parse::token::Token;
 pub use ptr::P;
