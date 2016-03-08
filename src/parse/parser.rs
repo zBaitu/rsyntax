@@ -5013,17 +5013,16 @@ impl<'a> Parser<'a> {
         let id = try!(self.parse_ident());
         if self.check(&token::Semi) {
             try!(self.bump());
+            // baitu
             // This mod is in an external file. Let's go get it!
             //let (m, attrs) = try!(self.eval_src_mod(id, outer_attrs, id_span));
             //Ok((id, m, Some(attrs)))
-            let mut attrs = Vec::new();
-            attrs.extend_from_slice(outer_attrs);
             Ok((id, ItemMod(
                 Mod {
                     inner: mk_sp(id_span.lo, id_span.lo),
                     items: Vec::new(),
                 }),
-                Some(attrs)))
+                None))
         } else {
             self.push_mod_path(id, outer_attrs);
             try!(self.expect(&token::OpenDelim(token::Brace)));
