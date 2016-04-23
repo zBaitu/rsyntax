@@ -18,11 +18,12 @@ use parse::token::InternedString;
 use ptr::P;
 use str::char_at;
 
+// baitu
 //use std::cell::RefCell;
-use std::io::Read;
 use std::iter;
+// baitu
 //use std::path::{Path, PathBuf};
-use std::path::Path;
+use std::path::{Path};
 use std::rc::Rc;
 use std::str;
 
@@ -43,6 +44,7 @@ pub mod obsolete;
 pub struct ParseSess {
     pub span_diagnostic: Handler, // better be the same as the one in the reader!
     /// Used to determine and report recursive mod inclusions
+    // baitu
     //included_mod_stack: RefCell<Vec<PathBuf>>,
     code_map: Rc<CodeMap>,
 }
@@ -50,13 +52,14 @@ pub struct ParseSess {
 impl ParseSess {
     pub fn new() -> ParseSess {
         let cm = Rc::new(CodeMap::new());
-        let handler = Handler::new(ColorConfig::Auto, None, true, false, cm.clone());
+        let handler = Handler::with_tty_emitter(ColorConfig::Auto, None, true, false, cm.clone());
         ParseSess::with_span_handler(handler, cm)
     }
 
     pub fn with_span_handler(handler: Handler, code_map: Rc<CodeMap>) -> ParseSess {
         ParseSess {
             span_diagnostic: handler,
+            // baitu
             //included_mod_stack: RefCell::new(vec![]),
             code_map: code_map
         }
@@ -72,95 +75,97 @@ impl ParseSess {
 // uses a HOF to parse anything, and <source> includes file and
 // source_str.
 
-pub fn parse_crate_from_file(
-    input: &Path,
-    cfg: ast::CrateConfig,
-    sess: &ParseSess
-) -> ast::Crate {
+pub fn parse_crate_from_file<'a>(input: &Path,
+                                 cfg: ast::CrateConfig,
+                                 sess: &'a ParseSess)
+                                 -> PResult<'a, ast::Crate> {
     let mut parser = new_parser_from_file(sess, cfg, input);
-    abort_if_errors(parser.parse_crate_mod(), &parser)
+    parser.parse_crate_mod()
 }
 
-pub fn parse_crate_attrs_from_file(
-    input: &Path,
-    cfg: ast::CrateConfig,
-    sess: &ParseSess
-) -> Vec<ast::Attribute> {
+pub fn parse_crate_attrs_from_file<'a>(input: &Path,
+                                       cfg: ast::CrateConfig,
+                                       sess: &'a ParseSess)
+                                       -> PResult<'a, Vec<ast::Attribute>> {
     let mut parser = new_parser_from_file(sess, cfg, input);
-    abort_if_errors(parser.parse_inner_attributes(), &parser)
+    parser.parse_inner_attributes()
 }
 
-pub fn parse_crate_from_source_str(name: String,
-                                   source: String,
-                                   cfg: ast::CrateConfig,
-                                   sess: &ParseSess)
-                                   -> ast::Crate {
+pub fn parse_crate_from_source_str<'a>(name: String,
+                                       source: String,
+                                       cfg: ast::CrateConfig,
+                                       sess: &'a ParseSess)
+                                       -> PResult<'a, ast::Crate> {
     let mut p = new_parser_from_source_str(sess,
                                            cfg,
                                            name,
                                            source);
-    maybe_aborted(panictry!(p.parse_crate_mod()),p)
+    p.parse_crate_mod()
 }
 
-pub fn parse_crate_attrs_from_source_str(name: String,
-                                         source: String,
-                                         cfg: ast::CrateConfig,
-                                         sess: &ParseSess)
-                                         -> Vec<ast::Attribute> {
+pub fn parse_crate_attrs_from_source_str<'a>(name: String,
+                                             source: String,
+                                             cfg: ast::CrateConfig,
+                                             sess: &'a ParseSess)
+                                             -> PResult<'a, Vec<ast::Attribute>> {
     let mut p = new_parser_from_source_str(sess,
                                            cfg,
                                            name,
                                            source);
-    maybe_aborted(panictry!(p.parse_inner_attributes()), p)
+    p.parse_inner_attributes()
 }
 
-pub fn parse_expr_from_source_str(name: String,
-                                  source: String,
-                                  cfg: ast::CrateConfig,
-                                  sess: &ParseSess)
-                                  -> P<ast::Expr> {
+pub fn parse_expr_from_source_str<'a>(name: String,
+                                      source: String,
+                                      cfg: ast::CrateConfig,
+                                      sess: &'a ParseSess)
+                                      -> PResult<'a, P<ast::Expr>> {
     let mut p = new_parser_from_source_str(sess, cfg, name, source);
-    maybe_aborted(panictry!(p.parse_expr()), p)
+    p.parse_expr()
 }
 
-pub fn parse_item_from_source_str(name: String,
-                                  source: String,
-                                  cfg: ast::CrateConfig,
-                                  sess: &ParseSess)
-                                  -> Option<P<ast::Item>> {
+/// Parses an item.
+///
+/// Returns `Ok(Some(item))` when successful, `Ok(None)` when no item was found, and`Err`
+/// when a syntax error occurred.
+pub fn parse_item_from_source_str<'a>(name: String,
+                                      source: String,
+                                      cfg: ast::CrateConfig,
+                                      sess: &'a ParseSess)
+                                      -> PResult<'a, Option<P<ast::Item>>> {
     let mut p = new_parser_from_source_str(sess, cfg, name, source);
-    maybe_aborted(panictry!(p.parse_item()), p)
+    p.parse_item()
 }
 
-pub fn parse_meta_from_source_str(name: String,
-                                  source: String,
-                                  cfg: ast::CrateConfig,
-                                  sess: &ParseSess)
-                                  -> P<ast::MetaItem> {
+pub fn parse_meta_from_source_str<'a>(name: String,
+                                      source: String,
+                                      cfg: ast::CrateConfig,
+                                      sess: &'a ParseSess)
+                                      -> PResult<'a, P<ast::MetaItem>> {
     let mut p = new_parser_from_source_str(sess, cfg, name, source);
-    maybe_aborted(panictry!(p.parse_meta_item()), p)
+    p.parse_meta_item()
 }
 
-pub fn parse_stmt_from_source_str(name: String,
-                                  source: String,
-                                  cfg: ast::CrateConfig,
-                                  sess: &ParseSess)
-                                  -> Option<P<ast::Stmt>> {
+pub fn parse_stmt_from_source_str<'a>(name: String,
+                                      source: String,
+                                      cfg: ast::CrateConfig,
+                                      sess: &'a ParseSess)
+                                      -> PResult<'a, Option<ast::Stmt>> {
     let mut p = new_parser_from_source_str(
         sess,
         cfg,
         name,
         source
     );
-    maybe_aborted(panictry!(p.parse_stmt()), p)
+    p.parse_stmt()
 }
 
 // Warning: This parses with quote_depth > 0, which is not the default.
-pub fn parse_tts_from_source_str(name: String,
-                                 source: String,
-                                 cfg: ast::CrateConfig,
-                                 sess: &ParseSess)
-                                 -> Vec<ast::TokenTree> {
+pub fn parse_tts_from_source_str<'a>(name: String,
+                                     source: String,
+                                     cfg: ast::CrateConfig,
+                                     sess: &'a ParseSess)
+                                     -> PResult<'a, Vec<ast::TokenTree>> {
     let mut p = new_parser_from_source_str(
         sess,
         cfg,
@@ -169,7 +174,7 @@ pub fn parse_tts_from_source_str(name: String,
     );
     p.quote_depth += 1;
     // right now this is re-creating the token trees from ... token trees.
-    maybe_aborted(panictry!(p.parse_all_token_trees()),p)
+    p.parse_all_token_trees()
 }
 
 // Create a new parser from a source string
@@ -262,28 +267,8 @@ pub fn tts_to_parser<'a>(sess: &'a ParseSess,
                          cfg: ast::CrateConfig) -> Parser<'a> {
     let trdr = lexer::new_tt_reader(&sess.span_diagnostic, None, None, tts);
     let mut p = Parser::new(sess, cfg, Box::new(trdr));
-    panictry!(p.check_unknown_macro_variable());
+    p.check_unknown_macro_variable();
     p
-}
-
-/// Abort if necessary
-pub fn maybe_aborted<T>(result: T, p: Parser) -> T {
-    p.abort_if_errors();
-    result
-}
-
-fn abort_if_errors<'a, T>(result: PResult<'a, T>, p: &Parser) -> T {
-    match result {
-        Ok(c) => {
-            p.abort_if_errors();
-            c
-        }
-        Err(mut e) => {
-            e.emit();
-            p.abort_if_errors();
-            unreachable!();
-        }
-    }
 }
 
 /// Parse a string representing a character literal into its final form.
@@ -456,11 +441,11 @@ fn looks_like_width_suffix(first_chars: &[char], s: &str) -> bool {
 }
 
 fn filtered_float_lit(data: token::InternedString, suffix: Option<&str>,
-                      sd: &Handler, sp: Span) -> ast::Lit_ {
+                      sd: &Handler, sp: Span) -> ast::LitKind {
     debug!("filtered_float_lit: {}, {:?}", data, suffix);
     match suffix.as_ref().map(|s| &**s) {
-        Some("f32") => ast::LitFloat(data, ast::TyF32),
-        Some("f64") => ast::LitFloat(data, ast::TyF64),
+        Some("f32") => ast::LitKind::Float(data, ast::FloatTy::F32),
+        Some("f64") => ast::LitKind::Float(data, ast::FloatTy::F64),
         Some(suf) => {
             if suf.len() >= 2 && looks_like_width_suffix(&['f'], suf) {
                 // if it looks like a width, lets try to be helpful.
@@ -473,13 +458,13 @@ fn filtered_float_lit(data: token::InternedString, suffix: Option<&str>,
                   .emit();
             }
 
-            ast::LitFloatUnsuffixed(data)
+            ast::LitKind::FloatUnsuffixed(data)
         }
-        None => ast::LitFloatUnsuffixed(data)
+        None => ast::LitKind::FloatUnsuffixed(data)
     }
 }
 pub fn float_lit(s: &str, suffix: Option<InternedString>,
-                 sd: &Handler, sp: Span) -> ast::Lit_ {
+                 sd: &Handler, sp: Span) -> ast::LitKind {
     debug!("float_lit: {:?}, {:?}", s, suffix);
     // FIXME #2252: bounds checking float literals is deferred until trans
     let s = s.chars().filter(|&c| c != '_').collect::<String>();
@@ -583,7 +568,7 @@ pub fn integer_lit(s: &str,
                    suffix: Option<InternedString>,
                    sd: &Handler,
                    sp: Span)
-                   -> ast::Lit_ {
+                   -> ast::LitKind {
     // s can only be ascii, byte indexing is fine
 
     let s2 = s.chars().filter(|&c| c != '_').collect::<String>();
@@ -593,7 +578,7 @@ pub fn integer_lit(s: &str,
 
     let mut base = 10;
     let orig = s;
-    let mut ty = ast::UnsuffixedIntLit(ast::Plus);
+    let mut ty = ast::LitIntType::Unsuffixed;
 
     if char_at(s, 0) == '0' && s.len() > 1 {
         match char_at(s, 1) {
@@ -613,8 +598,8 @@ pub fn integer_lit(s: &str,
                 2 => sd.span_err(sp, "binary float literal is not supported"),
                 _ => ()
             }
-            let ident = token::intern_and_get_ident(&*s);
-            return filtered_float_lit(ident, Some(&**suf), sd, sp)
+            let ident = token::intern_and_get_ident(&s);
+            return filtered_float_lit(ident, Some(&suf), sd, sp)
         }
     }
 
@@ -625,16 +610,16 @@ pub fn integer_lit(s: &str,
     if let Some(ref suf) = suffix {
         if suf.is_empty() { sd.span_bug(sp, "found empty literal suffix in Some")}
         ty = match &**suf {
-            "isize" => ast::SignedIntLit(ast::TyIs, ast::Plus),
-            "i8"  => ast::SignedIntLit(ast::TyI8, ast::Plus),
-            "i16" => ast::SignedIntLit(ast::TyI16, ast::Plus),
-            "i32" => ast::SignedIntLit(ast::TyI32, ast::Plus),
-            "i64" => ast::SignedIntLit(ast::TyI64, ast::Plus),
-            "usize" => ast::UnsignedIntLit(ast::TyUs),
-            "u8"  => ast::UnsignedIntLit(ast::TyU8),
-            "u16" => ast::UnsignedIntLit(ast::TyU16),
-            "u32" => ast::UnsignedIntLit(ast::TyU32),
-            "u64" => ast::UnsignedIntLit(ast::TyU64),
+            "isize" => ast::LitIntType::Signed(ast::IntTy::Is),
+            "i8"  => ast::LitIntType::Signed(ast::IntTy::I8),
+            "i16" => ast::LitIntType::Signed(ast::IntTy::I16),
+            "i32" => ast::LitIntType::Signed(ast::IntTy::I32),
+            "i64" => ast::LitIntType::Signed(ast::IntTy::I64),
+            "usize" => ast::LitIntType::Unsigned(ast::UintTy::Us),
+            "u8"  => ast::LitIntType::Unsigned(ast::UintTy::U8),
+            "u16" => ast::LitIntType::Unsigned(ast::UintTy::U16),
+            "u32" => ast::LitIntType::Unsigned(ast::UintTy::U32),
+            "u64" => ast::LitIntType::Unsigned(ast::UintTy::U64),
             _ => {
                 // i<digits> and u<digits> look like widths, so lets
                 // give an error message along those lines
@@ -658,9 +643,9 @@ pub fn integer_lit(s: &str,
     debug!("integer_lit: the type is {:?}, base {:?}, the new string is {:?}, the original \
            string was {:?}, the original suffix was {:?}", ty, base, s, orig, suffix);
 
-    let res = match u64::from_str_radix(s, base).ok() {
-        Some(r) => r,
-        None => {
+    match u64::from_str_radix(s, base) {
+        Ok(r) => ast::LitKind::Int(r, ty),
+        Err(_) => {
             // small bases are lexed as if they were base 10, e.g, the string
             // might be `0b10201`. This will cause the conversion above to fail,
             // but these cases have errors in the lexer: we don't want to emit
@@ -672,16 +657,8 @@ pub fn integer_lit(s: &str,
             if !already_errored {
                 sd.span_err(sp, "int literal is too large");
             }
-            0
+            ast::LitKind::Int(0, ty)
         }
-    };
-
-    // adjust the sign
-    let sign = ast::Sign::new(res);
-    match ty {
-        ast::SignedIntLit(t, _) => ast::LitInt(res, ast::SignedIntLit(t, sign)),
-        ast::UnsuffixedIntLit(_) => ast::LitInt(res, ast::UnsuffixedIntLit(sign)),
-        us@ast::UnsignedIntLit(_) => ast::LitInt(res, us)
     }
 }
 
@@ -690,8 +667,8 @@ mod tests {
     use super::*;
     use std::rc::Rc;
     use codemap::{Span, BytePos, Pos, Spanned, NO_EXPANSION};
-    use ast::{self, TokenTree};
-    use abi;
+    use ast::{self, TokenTree, PatKind};
+    use abi::Abi;
     use attr::{first_attr_value_str_by_name, AttrMetaMethods};
     use parse;
     use parse::parser::Parser;
@@ -710,7 +687,7 @@ mod tests {
         assert!(string_to_expr("a".to_string()) ==
                    P(ast::Expr{
                     id: ast::DUMMY_NODE_ID,
-                    node: ast::ExprPath(None, ast::Path {
+                    node: ast::ExprKind::Path(None, ast::Path {
                         span: sp(0, 1),
                         global: false,
                         segments: vec!(
@@ -729,7 +706,7 @@ mod tests {
         assert!(string_to_expr("::a::b".to_string()) ==
                    P(ast::Expr {
                     id: ast::DUMMY_NODE_ID,
-                    node: ast::ExprPath(None, ast::Path {
+                    node: ast::ExprKind::Path(None, ast::Path {
                             span: sp(0, 6),
                             global: true,
                             segments: vec!(
@@ -859,9 +836,9 @@ mod tests {
         assert!(string_to_expr("return d".to_string()) ==
                    P(ast::Expr{
                     id: ast::DUMMY_NODE_ID,
-                    node:ast::ExprRet(Some(P(ast::Expr{
+                    node:ast::ExprKind::Ret(Some(P(ast::Expr{
                         id: ast::DUMMY_NODE_ID,
-                        node:ast::ExprPath(None, ast::Path{
+                        node:ast::ExprKind::Path(None, ast::Path{
                             span: sp(7, 8),
                             global: false,
                             segments: vec!(
@@ -881,10 +858,10 @@ mod tests {
 
     #[test] fn parse_stmt_1 () {
         assert!(string_to_stmt("b;".to_string()) ==
-                   Some(P(Spanned{
-                       node: ast::StmtExpr(P(ast::Expr {
+                   Some(Spanned{
+                       node: ast::StmtKind::Expr(P(ast::Expr {
                            id: ast::DUMMY_NODE_ID,
-                           node: ast::ExprPath(None, ast::Path {
+                           node: ast::ExprKind::Path(None, ast::Path {
                                span:sp(0,1),
                                global:false,
                                segments: vec!(
@@ -897,7 +874,7 @@ mod tests {
                            span: sp(0,1),
                            attrs: None}),
                                            ast::DUMMY_NODE_ID),
-                       span: sp(0,1)})))
+                       span: sp(0,1)}))
 
     }
 
@@ -911,7 +888,7 @@ mod tests {
         assert!(panictry!(parser.parse_pat())
                 == P(ast::Pat{
                 id: ast::DUMMY_NODE_ID,
-                node: ast::PatIdent(ast::BindingMode::ByValue(ast::MutImmutable),
+                node: PatKind::Ident(ast::BindingMode::ByValue(ast::Mutability::Immutable),
                                     Spanned{ span:sp(0, 1),
                                              node: str_to_ident("b")
                     },
@@ -928,10 +905,10 @@ mod tests {
                       P(ast::Item{ident:str_to_ident("a"),
                             attrs:Vec::new(),
                             id: ast::DUMMY_NODE_ID,
-                            node: ast::ItemFn(P(ast::FnDecl {
+                            node: ast::ItemKind::Fn(P(ast::FnDecl {
                                 inputs: vec!(ast::Arg{
                                     ty: P(ast::Ty{id: ast::DUMMY_NODE_ID,
-                                                  node: ast::TyPath(None, ast::Path{
+                                                  node: ast::TyKind::Path(None, ast::Path{
                                         span:sp(10,13),
                                         global:false,
                                         segments: vec!(
@@ -946,8 +923,8 @@ mod tests {
                                     }),
                                     pat: P(ast::Pat {
                                         id: ast::DUMMY_NODE_ID,
-                                        node: ast::PatIdent(
-                                            ast::BindingMode::ByValue(ast::MutImmutable),
+                                        node: PatKind::Ident(
+                                            ast::BindingMode::ByValue(ast::Mutability::Immutable),
                                                 Spanned{
                                                     span: sp(6,7),
                                                     node: str_to_ident("b")},
@@ -957,12 +934,12 @@ mod tests {
                                     }),
                                         id: ast::DUMMY_NODE_ID
                                     }),
-                                output: ast::DefaultReturn(sp(15, 15)),
+                                output: ast::FunctionRetTy::Default(sp(15, 15)),
                                 variadic: false
                             }),
                                     ast::Unsafety::Normal,
                                     ast::Constness::NotConst,
-                                    abi::Rust,
+                                    Abi::Rust,
                                     ast::Generics{ // no idea on either of these:
                                         lifetimes: Vec::new(),
                                         ty_params: P::empty(),
@@ -972,10 +949,10 @@ mod tests {
                                         }
                                     },
                                     P(ast::Block {
-                                        stmts: vec!(P(Spanned{
-                                            node: ast::StmtSemi(P(ast::Expr{
+                                        stmts: vec!(Spanned{
+                                            node: ast::StmtKind::Semi(P(ast::Expr{
                                                 id: ast::DUMMY_NODE_ID,
-                                                node: ast::ExprPath(None,
+                                                node: ast::ExprKind::Path(None,
                                                       ast::Path{
                                                         span:sp(17,18),
                                                         global:false,
@@ -992,37 +969,37 @@ mod tests {
                                                 span: sp(17,18),
                                                 attrs: None,}),
                                                 ast::DUMMY_NODE_ID),
-                                            span: sp(17,19)})),
+                                            span: sp(17,19)}),
                                         expr: None,
                                         id: ast::DUMMY_NODE_ID,
-                                        rules: ast::DefaultBlock, // no idea
+                                        rules: ast::BlockCheckMode::Default, // no idea
                                         span: sp(15,21),
                                     })),
-                            vis: ast::Inherited,
+                            vis: ast::Visibility::Inherited,
                             span: sp(0,21)})));
     }
 
     #[test] fn parse_use() {
         let use_s = "use foo::bar::baz;";
         let vitem = string_to_item(use_s.to_string()).unwrap();
-        let vitem_s = item_to_string(&*vitem);
+        let vitem_s = item_to_string(&vitem);
         assert_eq!(&vitem_s[..], use_s);
 
         let use_s = "use foo::bar as baz;";
         let vitem = string_to_item(use_s.to_string()).unwrap();
-        let vitem_s = item_to_string(&*vitem);
+        let vitem_s = item_to_string(&vitem);
         assert_eq!(&vitem_s[..], use_s);
     }
 
     #[test] fn parse_extern_crate() {
         let ex_s = "extern crate foo;";
         let vitem = string_to_item(ex_s.to_string()).unwrap();
-        let vitem_s = item_to_string(&*vitem);
+        let vitem_s = item_to_string(&vitem);
         assert_eq!(&vitem_s[..], ex_s);
 
         let ex_s = "extern crate foo as bar;";
         let vitem = string_to_item(ex_s.to_string()).unwrap();
-        let vitem_s = item_to_string(&*vitem);
+        let vitem_s = item_to_string(&vitem);
         assert_eq!(&vitem_s[..], ex_s);
     }
 
@@ -1035,7 +1012,7 @@ mod tests {
         impl<'v> ::visit::Visitor<'v> for PatIdentVisitor {
             fn visit_pat(&mut self, p: &'v ast::Pat) {
                 match p.node {
-                    ast::PatIdent(_ , ref spannedident, _) => {
+                    PatKind::Ident(_ , ref spannedident, _) => {
                         self.spans.push(spannedident.span.clone());
                     }
                     _ => {
@@ -1045,7 +1022,7 @@ mod tests {
             }
         }
         let mut v = PatIdentVisitor { spans: Vec::new() };
-        ::visit::walk_item(&mut v, &*item);
+        ::visit::walk_item(&mut v, &item);
         return v.spans;
     }
 
@@ -1093,19 +1070,21 @@ mod tests {
 
         let name = "<source>".to_string();
         let source = "/// doc comment\r\nfn foo() {}".to_string();
-        let item = parse_item_from_source_str(name.clone(), source, Vec::new(), &sess).unwrap();
+        let item = parse_item_from_source_str(name.clone(), source, Vec::new(), &sess)
+            .unwrap().unwrap();
         let doc = first_attr_value_str_by_name(&item.attrs, "doc").unwrap();
         assert_eq!(&doc[..], "/// doc comment");
 
         let source = "/// doc comment\r\n/// line 2\r\nfn foo() {}".to_string();
-        let item = parse_item_from_source_str(name.clone(), source, Vec::new(), &sess).unwrap();
+        let item = parse_item_from_source_str(name.clone(), source, Vec::new(), &sess)
+            .unwrap().unwrap();
         let docs = item.attrs.iter().filter(|a| &*a.name() == "doc")
                     .map(|a| a.value_str().unwrap().to_string()).collect::<Vec<_>>();
         let b: &[_] = &["/// doc comment".to_string(), "/// line 2".to_string()];
         assert_eq!(&docs[..], b);
 
         let source = "/** doc comment\r\n *  with CRLF */\r\nfn foo() {}".to_string();
-        let item = parse_item_from_source_str(name, source, Vec::new(), &sess).unwrap();
+        let item = parse_item_from_source_str(name, source, Vec::new(), &sess).unwrap().unwrap();
         let doc = first_attr_value_str_by_name(&item.attrs, "doc").unwrap();
         assert_eq!(&doc[..], "/** doc comment\n *  with CRLF */");
     }
@@ -1114,10 +1093,10 @@ mod tests {
     fn ttdelim_span() {
         let sess = ParseSess::new();
         let expr = parse::parse_expr_from_source_str("foo".to_string(),
-            "foo!( fn main() { body } )".to_string(), vec![], &sess);
+            "foo!( fn main() { body } )".to_string(), vec![], &sess).unwrap();
 
         let tts = match expr.node {
-            ast::ExprMac(ref mac) => mac.node.tts.clone(),
+            ast::ExprKind::Mac(ref mac) => mac.node.tts.clone(),
             _ => panic!("not a macro"),
         };
 

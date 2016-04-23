@@ -208,12 +208,12 @@ pub fn nameize(p_s: &ParseSess, ms: &[TokenTree], res: &[Rc<NamedMatch>])
         match *m {
             TokenTree::Sequence(_, ref seq) => {
                 for next_m in &seq.tts {
-                    try!(n_rec(p_s, next_m, res, ret_val, idx))
+                    n_rec(p_s, next_m, res, ret_val, idx)?
                 }
             }
             TokenTree::Delimited(_, ref delim) => {
                 for next_m in &delim.tts {
-                    try!(n_rec(p_s, next_m, res, ret_val, idx));
+                    n_rec(p_s, next_m, res, ret_val, idx)?;
                 }
             }
             TokenTree::Token(sp, MatchNt(bind_name, _, _, _)) => {
@@ -374,7 +374,7 @@ pub fn parse(sess: &ParseSess,
                 match ei.top_elts.get_tt(idx) {
                     /* need to descend into sequence */
                     TokenTree::Sequence(sp, seq) => {
-                        if seq.op == ast::ZeroOrMore {
+                        if seq.op == ast::KleeneOp::ZeroOrMore {
                             let mut new_ei = ei.clone();
                             new_ei.match_cur += seq.num_captures;
                             new_ei.idx += 1;
@@ -512,7 +512,7 @@ pub fn parse_nt<'a>(p: &mut Parser<'a>, sp: Span, name: &str) -> Nonterminal {
         _ => {}
     }
     // check at the beginning and the parser checks after each bump
-    panictry!(p.check_unknown_macro_variable());
+    p.check_unknown_macro_variable();
     match name {
         "item" => match panictry!(p.parse_item()) {
             Some(i) => token::NtItem(i),
@@ -523,7 +523,7 @@ pub fn parse_nt<'a>(p: &mut Parser<'a>, sp: Span, name: &str) -> Nonterminal {
         },
         "block" => token::NtBlock(panictry!(p.parse_block())),
         "stmt" => match panictry!(p.parse_stmt()) {
-            Some(s) => token::NtStmt(s),
+            Some(s) => token::NtStmt(P(s)),
             None => {
                 p.fatal("expected a statement").emit();
                 panic!(FatalError);
@@ -535,7 +535,7 @@ pub fn parse_nt<'a>(p: &mut Parser<'a>, sp: Span, name: &str) -> Nonterminal {
         // this could be handled like a token, since it is one
         "ident" => match p.token {
             token::Ident(sn,b) => {
-                panictry!(p.bump());
+                p.bump();
                 token::NtIdent(Box::new(Spanned::<Ident>{node: sn, span: p.span}),b)
             }
             _ => {

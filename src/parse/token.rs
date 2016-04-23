@@ -15,7 +15,7 @@ pub use self::IdentStyle::*;
 pub use self::Lit::*;
 pub use self::Token::*;
 
-use ast;
+use ast::{self, BinOpKind};
 use ext::mtwt;
 use ptr::P;
 use util::interner::{RcStr, StrInterner};
@@ -196,7 +196,7 @@ impl Token {
             BinOp(Or)                   => true, // in lambda syntax
             OrOr                        => true, // in lambda syntax
             AndAnd                      => true, // double borrow
-            DotDot                      => true, // range notation
+            DotDot | DotDotDot          => true, // range notation
             ModSep                      => true,
             Interpolated(NtExpr(..))    => true,
             Interpolated(NtIdent(..))   => true,
@@ -220,6 +220,14 @@ impl Token {
         match *self {
             Ident(_, _) => true,
             _           => false,
+        }
+    }
+
+    /// Returns `true` if the token is interpolated.
+    pub fn is_interpolated(&self) -> bool {
+        match *self {
+            Interpolated(..) => true,
+            _                => false,
         }
     }
 
@@ -256,26 +264,26 @@ impl Token {
     }
 
     /// Maps a token to its corresponding binary operator.
-    pub fn to_binop(&self) -> Option<ast::BinOp_> {
+    pub fn to_binop(&self) -> Option<BinOpKind> {
         match *self {
-            BinOp(Star)     => Some(ast::BiMul),
-            BinOp(Slash)    => Some(ast::BiDiv),
-            BinOp(Percent)  => Some(ast::BiRem),
-            BinOp(Plus)     => Some(ast::BiAdd),
-            BinOp(Minus)    => Some(ast::BiSub),
-            BinOp(Shl)      => Some(ast::BiShl),
-            BinOp(Shr)      => Some(ast::BiShr),
-            BinOp(And)      => Some(ast::BiBitAnd),
-            BinOp(Caret)    => Some(ast::BiBitXor),
-            BinOp(Or)       => Some(ast::BiBitOr),
-            Lt              => Some(ast::BiLt),
-            Le              => Some(ast::BiLe),
-            Ge              => Some(ast::BiGe),
-            Gt              => Some(ast::BiGt),
-            EqEq            => Some(ast::BiEq),
-            Ne              => Some(ast::BiNe),
-            AndAnd          => Some(ast::BiAnd),
-            OrOr            => Some(ast::BiOr),
+            BinOp(Star)     => Some(BinOpKind::Mul),
+            BinOp(Slash)    => Some(BinOpKind::Div),
+            BinOp(Percent)  => Some(BinOpKind::Rem),
+            BinOp(Plus)     => Some(BinOpKind::Add),
+            BinOp(Minus)    => Some(BinOpKind::Sub),
+            BinOp(Shl)      => Some(BinOpKind::Shl),
+            BinOp(Shr)      => Some(BinOpKind::Shr),
+            BinOp(And)      => Some(BinOpKind::BitAnd),
+            BinOp(Caret)    => Some(BinOpKind::BitXor),
+            BinOp(Or)       => Some(BinOpKind::BitOr),
+            Lt              => Some(BinOpKind::Lt),
+            Le              => Some(BinOpKind::Le),
+            Ge              => Some(BinOpKind::Ge),
+            Gt              => Some(BinOpKind::Gt),
+            EqEq            => Some(BinOpKind::Eq),
+            Ne              => Some(BinOpKind::Ne),
+            AndAnd          => Some(BinOpKind::And),
+            OrOr            => Some(BinOpKind::Or),
             _               => None,
         }
     }
@@ -495,9 +503,6 @@ macro_rules! declare_special_idents_and_keywords {(
     }
 
     fn mk_fresh_ident_interner() -> IdentInterner {
-        // The indices here must correspond to the numbers in
-        // special_idents, in Keyword to_name(), and in static
-        // constants below.
         let mut init_vec = Vec::new();
         $(init_vec.push($si_str);)*
         $(init_vec.push($sk_str);)*
@@ -509,7 +514,7 @@ macro_rules! declare_special_idents_and_keywords {(
 // If the special idents get renumbered, remember to modify these two as appropriate
 pub const SELF_KEYWORD_NAME: ast::Name = ast::Name(SELF_KEYWORD_NAME_NUM);
 const STATIC_KEYWORD_NAME: ast::Name = ast::Name(STATIC_KEYWORD_NAME_NUM);
-const SUPER_KEYWORD_NAME: ast::Name = ast::Name(SUPER_KEYWORD_NAME_NUM);
+pub const SUPER_KEYWORD_NAME: ast::Name = ast::Name(SUPER_KEYWORD_NAME_NUM);
 const SELF_TYPE_KEYWORD_NAME: ast::Name = ast::Name(SELF_TYPE_KEYWORD_NAME_NUM);
 
 pub const SELF_KEYWORD_NAME_NUM: u32 = 1;
@@ -537,69 +542,70 @@ declare_special_idents_and_keywords! {
         // outside of libsyntax
         (7,                          clownshoe_abi,          "__rust_abi");
         (8,                          opaque,                 "<opaque>");
-        (9,                          unnamed_field,          "<unnamed_field>");
+        (9,                          __unused1,              "<__unused1>");
         (super::SELF_TYPE_KEYWORD_NAME_NUM, type_self,       "Self");
         (11,                         prelude_import,         "prelude_import");
+        (12,                         DEFAULT,                "default");
     }
 
     pub mod keywords {
         // These ones are variants of the Keyword enum
 
         'strict:
-        (12,                         As,         "as");
-        (13,                         Break,      "break");
-        (14,                         Crate,      "crate");
-        (15,                         Else,       "else");
-        (16,                         Enum,       "enum");
-        (17,                         Extern,     "extern");
-        (18,                         False,      "false");
-        (19,                         Fn,         "fn");
-        (20,                         For,        "for");
-        (21,                         If,         "if");
-        (22,                         Impl,       "impl");
-        (23,                         In,         "in");
-        (24,                         Let,        "let");
-        (25,                         Loop,       "loop");
-        (26,                         Match,      "match");
-        (27,                         Mod,        "mod");
-        (28,                         Move,       "move");
-        (29,                         Mut,        "mut");
-        (30,                         Pub,        "pub");
-        (31,                         Ref,        "ref");
-        (32,                         Return,     "return");
+        (13,                         As,         "as");
+        (14,                         Break,      "break");
+        (15,                         Crate,      "crate");
+        (16,                         Else,       "else");
+        (17,                         Enum,       "enum");
+        (18,                         Extern,     "extern");
+        (19,                         False,      "false");
+        (20,                         Fn,         "fn");
+        (21,                         For,        "for");
+        (22,                         If,         "if");
+        (23,                         Impl,       "impl");
+        (24,                         In,         "in");
+        (25,                         Let,        "let");
+        (26,                         Loop,       "loop");
+        (27,                         Match,      "match");
+        (28,                         Mod,        "mod");
+        (29,                         Move,       "move");
+        (30,                         Mut,        "mut");
+        (31,                         Pub,        "pub");
+        (32,                         Ref,        "ref");
+        (33,                         Return,     "return");
         // Static and Self are also special idents (prefill de-dupes)
         (super::STATIC_KEYWORD_NAME_NUM, Static, "static");
         (super::SELF_KEYWORD_NAME_NUM, SelfValue, "self");
         (super::SELF_TYPE_KEYWORD_NAME_NUM, SelfType, "Self");
-        (33,                         Struct,     "struct");
+        (34,                         Struct,     "struct");
         (super::SUPER_KEYWORD_NAME_NUM, Super,   "super");
-        (34,                         True,       "true");
-        (35,                         Trait,      "trait");
-        (36,                         Type,       "type");
-        (37,                         Unsafe,     "unsafe");
-        (38,                         Use,        "use");
-        (39,                         While,      "while");
-        (40,                         Continue,   "continue");
-        (41,                         Box,        "box");
-        (42,                         Const,      "const");
-        (43,                         Where,      "where");
+        (35,                         True,       "true");
+        (36,                         Trait,      "trait");
+        (37,                         Type,       "type");
+        (38,                         Unsafe,     "unsafe");
+        (39,                         Use,        "use");
+        (40,                         While,      "while");
+        (41,                         Continue,   "continue");
+        (42,                         Box,        "box");
+        (43,                         Const,      "const");
+        (44,                         Where,      "where");
         'reserved:
-        (44,                         Virtual,    "virtual");
-        (45,                         Proc,       "proc");
-        (46,                         Alignof,    "alignof");
-        (47,                         Become,     "become");
-        (48,                         Offsetof,   "offsetof");
-        (49,                         Priv,       "priv");
-        (50,                         Pure,       "pure");
-        (51,                         Sizeof,     "sizeof");
-        (52,                         Typeof,     "typeof");
-        (53,                         Unsized,    "unsized");
-        (54,                         Yield,      "yield");
-        (55,                         Do,         "do");
-        (56,                         Abstract,   "abstract");
-        (57,                         Final,      "final");
-        (58,                         Override,   "override");
-        (59,                         Macro,      "macro");
+        (45,                         Virtual,    "virtual");
+        (46,                         Proc,       "proc");
+        (47,                         Alignof,    "alignof");
+        (48,                         Become,     "become");
+        (49,                         Offsetof,   "offsetof");
+        (50,                         Priv,       "priv");
+        (51,                         Pure,       "pure");
+        (52,                         Sizeof,     "sizeof");
+        (53,                         Typeof,     "typeof");
+        (54,                         Unsized,    "unsized");
+        (55,                         Yield,      "yield");
+        (56,                         Do,         "do");
+        (57,                         Abstract,   "abstract");
+        (58,                         Final,      "final");
+        (59,                         Override,   "override");
+        (60,                         Macro,      "macro");
     }
 }
 
@@ -661,7 +667,7 @@ impl InternedString {
 impl Deref for InternedString {
     type Target = str;
 
-    fn deref(&self) -> &str { &*self.string }
+    fn deref(&self) -> &str { &self.string }
 }
 
 impl fmt::Debug for InternedString {
@@ -700,7 +706,7 @@ impl<'a> PartialEq<InternedString> for &'a str {
 
 impl Decodable for InternedString {
     fn decode<D: Decoder>(d: &mut D) -> Result<InternedString, D::Error> {
-        Ok(intern(try!(d.read_str()).as_ref()).as_str())
+        Ok(intern(d.read_str()?.as_ref()).as_str())
     }
 }
 

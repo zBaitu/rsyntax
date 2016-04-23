@@ -14,7 +14,8 @@
 //!
 //! This API is completely unstable and subject to change.
 
-// #![crate_name = "syntax"]
+// baitu
+//#![crate_name = "syntax"]
 #![unstable(feature = "rustc_private", issue = "27812")]
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]
@@ -22,24 +23,23 @@
        html_favicon_url = "https://doc.rust-lang.org/favicon.ico",
        html_root_url = "https://doc.rust-lang.org/nightly/",
        test(attr(deny(warnings))))]
+#![cfg_attr(not(stage0), deny(warnings))]
 
 #![feature(associated_consts)]
 #![feature(filling_drop)]
 #![feature(libc)]
 #![feature(rustc_private)]
 #![feature(staged_api)]
-#![feature(str_char)]
 #![feature(str_escape)]
 #![feature(unicode)]
+#![feature(question_mark)]
 
 extern crate serialize;
 extern crate term;
 extern crate libc;
-#[macro_use]
-extern crate log;
-#[macro_use]
-#[no_link]
-extern crate rustc_bitflags;
+#[macro_use] extern crate log;
+#[macro_use] #[no_link] extern crate rustc_bitflags;
+extern crate rustc_unicode;
 
 extern crate serialize as rustc_serialize; // used by deriving
 
@@ -91,7 +91,6 @@ pub mod syntax {
 
 pub mod abi;
 pub mod ast;
-pub mod ast_util;
 pub mod attr;
 pub mod codemap;
 pub mod config;
@@ -127,6 +126,7 @@ pub mod ext {
     }
 }
 
+// baitu
 pub use ast::*;
 pub use attr::ThinAttributes;
 pub use codemap::{BytePos, Span, Spanned, SpanSnippetError};
