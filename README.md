@@ -1,20 +1,20 @@
 rSyntax ---- Rust libsyntax for rFmt
 ===============================
 
-https://github.com/zBaitu/rSyntax
+https://github.com/zBaitu/rsyntax
 
 Overview
 ----------
-rSyntax is cloned from [Rust libsyntax](https://github.com/rust-lang/rust/tree/master/src/libsyntax). It's only used for [rFmt](https://github.com/zBaitu/rFmt), another Rust code formatter.
+rSyntax is cloned from [Rust libsyntax](https://github.com/rust-lang/rust/tree/master/src/libsyntax). It's only used for [rFmt](https://github.com/zBaitu/rfmt), another Rust code formatter.
 
 Features
 ----------
 Only 3 file are changed.
-* [lib.rs](https://github.com/zBaitu/rSyntax/src/lib.rs)  
+* [lib.rs](https://github.com/zBaitu/rsyntax/src/lib.rs)  
 Add some pub use.
-* [ast.rs](https://github.com/zBaitu/rSyntax/src/ast.rs)  
+* [ast.rs](https://github.com/zBaitu/rsyntax/src/ast.rs)  
 Add Debug for some struct/enum.
-* [parser.rs](https://github.com/zBaitu/rSyntax/src/parse/parser.rs)  
+* [parser.rs](https://github.com/zBaitu/rsyntax/src/parse/parser.rs)  
 Skip sub mod parse, and make the high position equals to the low position of the sub mod span, to specify this is a sub mod.
 
 ```
