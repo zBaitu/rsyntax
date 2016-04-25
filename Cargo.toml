@@ -6,6 +6,7 @@ homepage = "https://github.com/zBaitu/rsyntax"
 repository = "https://github.com/zBaitu/rsyntax"
 keywords = ["syntax", "parser"]
 readme = "README.md"
+license = "Apache-2.0/MIT"
 description = """
 A custom Rust parser cloned from Rust libsyntax.
 It is only used for rfmt, another Rust source code formatter.
